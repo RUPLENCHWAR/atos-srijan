@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AICA - AI Claims Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container" id="main-container" style="display: none;">
+            <div class="header">
+                <h1>🚀 AICA - AI Claims Assistant</h1>
+                <p>Intelligent Claims Processing & Fraud Detection Platform for BFSI</p>
+                <div class="user-controls">
+                    <div class="user-info">Welcome, <span id="username">Admin</span></div>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="dashboard">Dashboard</div>
+                <div class="tab" data-tab="customer-portal">Customer Portal</div>
+                <div class="tab" data-tab="analytics">Advanced Analytics</div>
+                <div class="tab" data-tab="settings">Settings</div>
+            </div>
+
+            <div class="tab-content active" id="dashboard-tab">
+                <div class="metrics">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalClaims">247</div>
+                        <div class="metric-label">Total Claims Processed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="fraudDetected">23</div>
+                        <div class="metric-label">Fraud Cases Detected</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avgProcessTime">2.3</div>
+                        <div class="metric-label">Avg Processing Time (hrs)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="accuracy">94.2%</div>
+                        <div class="metric-label">Detection Accuracy</div>
+                    </div>
+                </div>
+
+                <div class="dashboard">
+                    <div class="card">
+                        <h3>📋 New Claim Submission</h3>
+                        <form id="claimForm">
+                            <div class="form-group">
+                                <label for="claimType">Claim Type</label>
+                                <select id="claimType" required>
+                                    <option value="">Select Claim Type</option>
+                                    <option value="auto">Auto Insurance</option>
+                                    <option value="health">Health Insurance</option>
+                                    <option value="property">Property Insurance</option>
+                                    <option value="life">Life Insurance</option>
+                                    <option value="travel">Travel Insurance</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="claimAmount">Claim Amount ($)</label>
+                                <input type="number" id="claimAmount" placeholder="Enter claim amount" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customerName">Customer Name</label>
+                                <input type="text" id="customerName" placeholder="Enter customer name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="incidentDate">Incident Date</label>
+                                <input type="date" id="incidentDate" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="description">Incident Description</label>
+                                <textarea id="description" placeholder="Describe the incident..." rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="documents">Supporting Documents</label>
+                                <input type="file" id="documents" multiple accept=".pdf,.jpg,.png,.doc,.docx">
+                            </div>
+                            
+                            <button type="submit" class="btn">🚀 Submit Claim</button>
+                        </form>
+                        
+                        <div class="loading" id="processingLoader">
+                            <div class="spinner"></div>
+                            <p>AI Agents Processing Claim...</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>🤖 AI Agent Status</h3>
+                        <div class="agent-status">
+                            <div class="agent" id="ocrAgent">
+                                <div class="agent-name">📄 OCR Agent</div>
+                                <div class="agent-task">Ready for document extraction</div>
+                            </div>
+                            <div class="agent" id="nlpAgent">
+                                <div class="agent-name">🧠 NLP Agent</div>
+                                <div class="agent-task">Standby for text analysis</div>
+                            </div>
+                            <div class="agent" id="fraudAgent">
+                                <div class="agent-name">🔍 Fraud Detection Agent</div>
+                                <div class="agent-task">Monitoring for anomalies</div>
+                            </div>
+                            <div class="agent" id="customerAgent">
+                                <div class="agent-name">💬 Customer Interaction Agent</div>
+                                <div class="agent-task">Ready for customer queries</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>💬 AI Customer Support</h4>
+                            <div class="form-group">
+                                <input type="text" id="customerQuery" placeholder="Ask AICA about your claim..." style="margin-bottom: 10px;">
+                                <button class="btn" onclick="askAICA()">Ask AICA</button>
+                            </div>
+                            <div id="aiResponse" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard">
+                    <div class="card">
+                        <h3>📊 Real-time Analytics</h3>
+                        <div class="chart-container">
+                            <canvas id="fraudChart"></canvas>
+                        </div>
+                        <div class="metrics">
+                            <div style="text-align: center;">
+                                <strong>Fraud Detection Rate: <span style="color: #e74c3c;">9.3%</span></strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>📈 Processing Performance</h3>
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                        <div class="metrics">
+                            <div style="text-align: center;">
+                                <strong>Processing Time Reduction: <span style="color: #27ae60;">67%</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Recent Claims</h3>
+                    <div class="claims-list" id="claimsList">
+                        <!-- Claims will be populated here -->
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-success" onclick="approveSelected()">✅ Approve Selected</button>
+                        <button class="btn btn-danger" onclick="flagSelected()">🚨 Flag for Review</button>
+                        <button class="btn btn-warning" onclick="requestMoreInfo()">📋 Request More Info</button>
+                        <button class="btn" onclick="exportClaimsData()" style="float: right;">📊 Export Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="customer-portal-tab">
+                <div class="customer-portal">
+                    <h3>👤 Customer Claim Portal</h3>
+                    <div class="form-group">
+                        <input type="text" id="searchClaim" placeholder="Search by Claim ID or Customer Name..." onkeyup="filterClaims()">
+                    </div>
+                    <div id="customerClaimsList">
+                        <!-- Customer claims will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="analytics-tab">
+                <div class="card">
+                    <h3>📈 Predictive Analytics</h3>
+                    <div class="chart-container">
+                        <canvas id="predictiveChart"></canvas>
+                    </div>
+                    <div class="metrics">
+                        <div style="text-align: center;">
+                            <strong>Predicted Fraud Trend: <span style="color: #e74c3c;">Increasing</span></strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🤖 ML Model Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="mlChart"></canvas>
+                    </div>
+                    <div class="metrics">
+                        <div style="text-align: center;">
+                            <strong>Model Accuracy: <span style="color: #27ae60;">94.2%</span></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="settings-tab">
+                <div class="card">
+                    <h3>⚙️ System Settings</h3>
+                    <div class="form-group">
+                        <label for="aiSensitivity">AI Sensitivity Level</label>
+                        <input type="range" id="aiSensitivity" min="1" max="10" value="7">
+                        <span id="sensitivityValue">Medium-High</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="autoApprove">Auto-approve Low Risk Claims</label>
+                        <input type="checkbox" id="autoApprove" checked>
+                    </div>
+                    <div class="form-group">
+                        <label for="notifications">Enable Notifications</label>
+                        <input type="checkbox" id="notifications" checked>
+                    </div>
+                    <button class="btn" onclick="saveSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-container" id="login-container">
+            <h2>🔐 AICA Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" required>
+                        <option value="admin">Administrator</option>
+                        <option value="agent">Claims Agent</option>
+                        <option value="customer">Customer</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let claims = [
+            {
+                id: 'CLM-2025-001',
+                type: 'Auto Insurance',
+                customer: 'John Smith',
+                amount: 15420,
+                date: '2025-08-15',
+                status: 'approved',
+                fraudScore: 0.12,
+                description: 'Rear-end collision on Highway 101',
+                progress: 100
+            },
+            {
+                id: 'CLM-2025-002',
+                type: 'Health Insurance',
+                customer: 'Sarah Johnson',
+                amount: 8750,
+                date: '2025-08-14',
+                status: 'flagged',
+                fraudScore: 0.78,
+                description: 'Emergency surgery claim',
+                progress: 60
+            },
+            {
+                id: 'CLM-2025-003',
+                type: 'Property Insurance',
+                customer: 'Mike Davis',
+                amount: 32100,
+                date: '2025-08-13',
+                status: 'processing',
+                fraudScore: 0.45,
+                description: 'Water damage from burst pipe',
+                progress: 30
+            },
+            {
+                id: 'CLM-2025-004',
+                type: 'Travel Insurance',
+                customer: 'Emma Wilson',
+                amount: 2340,
+                date: '2025-08-12',
+                status: 'approved',
+                fraudScore: 0.08,
+                description: 'Flight cancellation reimbursement',
+                progress: 100
+            },
+            {
+                id: 'CLM-2025-005',
+                type: 'Auto Insurance',
+                customer: 'Robert Brown',
+                amount: 45600,
+                date: '2025-08-11',
+                status: 'flagged',
+                fraudScore: 0.89,
+                description: 'Total loss vehicle claim',
+                progress: 75
+            }
+        ];
+
+        let selectedClaims = new Set();
+        let currentUser = null;
+        let socket = null;
+
+        // Initialize charts
+        let fraudChart, performanceChart, predictiveChart, mlChart;
+
+        function initializeCharts() {
+            // Fraud Detection Chart
+            const fraudCtx = document.getElementById('fraudChart').getContext('2d');
+            fraudChart = new Chart(fraudCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Legitimate Claims', 'Fraudulent Claims', 'Under Review'],
+                    datasets: [{
+                        data: [224, 23, 15],
+                        backgroundColor: ['#27ae60', '#e74c3c', '#f39c12'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Performance Chart
+            const perfCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(perfCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+                    datasets: [{
+                        label: 'Processing Time (hours)',
+                        data: [12.5, 11.2, 9.8, 7.3, 5.1, 3.8, 2.9, 2.3],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Hours'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Predictive Analytics Chart
+            const predictiveCtx = document.getElementById('predictiveChart').getContext('2d');
+            predictiveChart = new Chart(predictiveCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+                    datasets: [{
+                        label: 'Predicted Fraud Rate',
+                        data: [8.2, 9.1, 10.5, 11.2, 12.1, 13.5],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderDash: [5, 5]
+                    }, {
+                        label: 'Historical Fraud Rate',
+                        data: [7.1, 7.5, 8.2, 8.9, 9.3, 10.2],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Percentage'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ML Model Performance Chart
+            const mlCtx = document.getElementById('mlChart').getContext('2d');
+            mlChart = new Chart(mlCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Precision', 'Recall', 'F1-Score', 'Accuracy'],
+                    datasets: [{
+                        label: 'Model Performance',
+                        data: [92.5, 94.8, 93.6, 94.2],
+                        backgroundColor: ['#3498db', '#27ae60', '#f39c12', '#9b59b6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderClaims() {
+            const claimsList = document.getElementById('claimsList');
+            claimsList.innerHTML = '';
+
+            claims.forEach(claim => {
+                const claimElement = document.createElement('div');
+                claimElement.className = 'claim-item';
+                
+                const fraudScoreClass = claim.fraudScore > 0.7 ? 'fraud-high' : 
+                                      claim.fraudScore > 0.3 ? 'fraud-medium' : 'fraud-low';
+                
+                const statusClass = claim.status === 'approved' ? 'status-approved' :
+                                  claim.status === 'flagged' ? 'status-flagged' : 
+                                  claim.status === 'rejected' ? 'status-rejected' : 'status-processing';
+
+                claimElement.innerHTML = `
+                    <input type="checkbox" onchange="toggleClaimSelection('${claim.id}')" style="margin-right: 15px;">
+                    <div class="claim-info">
+                        <div class="claim-id">${claim.id}</div>
+                        <div>${claim.customer} - ${claim.type}</div>
+                        <div class="claim-amount">$${claim.amount.toLocaleString()}</div>
+                        <div style="font-size: 0.9em; color: #666;">${claim.description}</div>
+                    </div>
+                    <div>
+                        <div class="fraud-score ${fraudScoreClass}">
+                            Risk: ${(claim.fraudScore * 100).toFixed(1)}%
+                        </div>
+                        <div class="status-indicator ${statusClass}">
+                            ${claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                        </div>
+                    </div>
+                `;
+                
+                claimsList.appendChild(claimElement);
+            });
+        }
+
+        function renderCustomerClaims() {
+            const customerClaimsList = document.getElementById('customerClaimsList');
+            customerClaimsList.innerHTML = '';
+
+            claims.forEach(claim => {
+                const claimElement = document.createElement('div');
+                claimElement.className = 'customer-claim';
+                
+                const statusClass = claim.status === 'approved' ? 'status-approved' :
+                                  claim.status === 'flagged' ? 'status-flagged' : 
+                                  claim.status === 'rejected' ? 'status-rejected' : 'status-processing';
+
+                claimElement.innerHTML = `
+                    <h4>${claim.id} - ${claim.type}</h4>
+                    <div>Status: <span class="${statusClass}" style="padding: 3px 8px;">${claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}</span></div>
+                    <div>Amount: $${claim.amount.toLocaleString()}</div>
+                    <div>Submitted: ${claim.date}</div>
+                    <div style="margin-top: 10px;">
+                        <div>Progress:</div>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: ${claim.progress}%"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn" onclick="viewClaimDetails('${claim.id}')">View Details</button>
+                    </div>
+                `;
+                
+                customerClaimsList.appendChild(claimElement);
+            });
+        }
+
+        function filterClaims() {
+            const searchTerm = document.getElementById('searchClaim').value.toLowerCase();
+            const customerClaims = document.querySelectorAll('.customer-claim');
+            
+            customerClaims.forEach(claim => {
+                const claimText = claim.textContent.toLowerCase();
+                if (claimText.includes(searchTerm)) {
+                    claim.style.display = 'block';
+                } else {
+                    claim.style.display = 'none';
+                }
+            });
+        }
+
+        function viewClaimDetails(claimId) {
+            const claim = claims.find(c => c.id === claimId);
+            if (claim) {
+                showNotification(`Viewing details for claim ${claimId}: ${claim.description}`);
+            }
+        }
+
+        function toggleClaimSelection(claimId) {
+            if (selectedClaims.has(claimId)) {
+                selectedClaims.delete(claimId);
+            } else {
+                selectedClaims.add(claimId);
+            }
+        }
+
+        function simulateAIProcessing() {
+            const agents = ['ocrAgent', 'nlpAgent', 'fraudAgent', 'customerAgent'];
+            let currentAgent = 0;
+
+            const processStep = () => {
+                if (currentAgent > 0) {
+                    document.getElementById(agents[currentAgent - 1]).classList.remove('active');
+                }
+                
+                if (currentAgent < agents.length) {
+                    const agent = document.getElementById(agents[currentAgent]);
+                    agent.classList.add('active');
+                    
+                    const tasks = [
+                        'Extracting text from documents...',
+                        'Analyzing claim content...',
+                        'Calculating fraud risk score...',
+                        'Preparing customer response...'
+                    ];
+                    
+                    agent.querySelector('.agent-task').textContent = tasks[currentAgent];
+                    currentAgent++;
+                    
+                    setTimeout(processStep, 1500);
+                } else {
+                    // Reset all agents
+                    agents.forEach(agentId => {
+                        const agent = document.getElementById(agentId);
+                        agent.classList.remove('active');
+                        agent.querySelector('.agent-task').textContent = 'Task completed ✓';
+                    });
+                }
+            };
+
+            processStep();
+        }
+
+        function generateClaimId() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const number = String(claims.length + 1).padStart(3, '0');
+            return `CLM-${year}-${number}`;
+        }
+
+        function calculateFraudScore(claim) {
+            let score = 0;
+            
+            // Amount-based risk
+            if (claim.amount > 50000) score += 0.3;
+            else if (claim.amount > 20000) score += 0.2;
+            else if (claim.amount > 10000) score += 0.1;
+            
+            // Type-based risk
+            const riskFactors = {
+                'auto': 0.1,
+                'health': 0.15,
+                'property': 0.2,
+                'life': 0.25,
+                'travel': 0.05
+            };
+            score += riskFactors[claim.type] || 0;
+            
+            // Date-based risk (recent claims might be higher risk)
+            const incidentDate = new Date(claim.incidentDate);
+            const daysDiff = (new Date() - incidentDate) / (1000 * 60 * 60 * 24);
+            if (daysDiff < 1) score += 0.2;
+            else if (daysDiff < 7) score += 0.1;
+            
+            // Add some randomness for demo
+            score += Math.random() * 0.3;
+            
+            return Math.min(score, 1);
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.background = type === 'success' ? '#27ae60' : 
+                                          type === 'warning' ? '#f39c12' : '#e74c3c';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function askAICA() {
+            const query = document.getElementById('customerQuery').value;
+            const responseDiv = document.getElementById('aiResponse');
+            
+            if (!query.trim()) return;
+            
+            responseDiv.style.display = 'block';
+            responseDiv.innerHTML = '<div class="spinner" style="width: 20px; height: 20px;"></div> AICA is thinking...';
+            
+            setTimeout(() => {
+                const responses = [
+                    `Based on your query "${query}", I've analyzed your claim status. Your claim is currently in the verification stage and should be completed within 24 hours.`,
+                    `I understand your concern about "${query}". Let me check your policy details... Your coverage includes this incident type, and I've expedited your claim for priority processing.`,
+                    `Regarding "${query}" - I've reviewed similar cases and can confirm this is a standard procedure. I've also updated your claim status to fast-track processing.`,
+                    `Thank you for asking about "${query}". I've cross-referenced your policy and incident details. Everything looks good, and I expect approval within the next few hours.`
+                ];
+                
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                responseDiv.innerHTML = `<strong>🤖 AICA:</strong> ${randomResponse}`;
+                document.getElementById('customerQuery').value = '';
+            }, 2000);
+        }
+
+        function approveSelected() {
+            if (selectedClaims.size === 0) {
+                showNotification('Please select claims to approve', 'warning');
+                return;
+            }
+            
+            selectedClaims.forEach(claimId => {
+                const claim = claims.find(c => c.id === claimId);
+                if (claim) {
+                    claim.status = 'approved';
+                    claim.progress = 100;
+                }
+            });
+            
+            renderClaims();
+            renderCustomerClaims();
+            selectedClaims.clear();
+            showNotification(`${selectedClaims.size || 'Selected'} claims approved successfully!`);
+            updateMetrics();
+        }
+
+        function flagSelected() {
+            if (selectedClaims.size === 0) {
+                showNotification('Please select claims to flag', 'warning');
+                return;
+            }
+            
+            selectedClaims.forEach(claimId => {
+                const claim = claims.find(c => c.id === claimId);
+                if (claim) {
+                    claim.status = 'flagged';
+                    claim.progress = 75;
+                }
+            });
+            
+            renderClaims();
+            renderCustomerClaims();
+            selectedClaims.clear();
+            showNotification('Selected claims flagged for manual review');
+            updateMetrics();
+        }
+
+        function requestMoreInfo() {
+            if (selectedClaims.size === 0) {
+                showNotification('Please select claims to request more info', 'warning');
+                return;
+            }
+            
+            showNotification('Information requests sent to customers');
+            selectedClaims.forEach(claimId => {
+                const claim = claims.find(c => c.id === claimId);
+                if (claim) {
+                    claim.progress = 50;
+                }
+            });
+            renderCustomerClaims();
+            selectedClaims.clear();
+        }
+
+        function updateMetrics() {
+            const totalClaims = claims.length;
+            const fraudClaims = claims.filter(c => c.status === 'flagged' || c.fraudScore > 0.7).length;
+            const avgProcessTime = (Math.random() * 2 + 1.5).toFixed(1);
+            const accuracy = (92 + Math.random() * 6).toFixed(1);
+            
+            document.getElementById('totalClaims').textContent = totalClaims;
+            document.getElementById('fraudDetected').textContent = fraudClaims;
+            document.getElementById('avgProcessTime').textContent = avgProcessTime;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        // Handle form submission
+        document.getElementById('claimForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const claimData = {
+                id: generateClaimId(),
+                type: document.getElementById('claimType').value,
+                customer: document.getElementById('customerName').value,
+                amount: parseInt(document.getElementById('claimAmount').value),
+                date: document.getElementById('incidentDate').value,
+                status: 'processing',
+                description: document.getElementById('description').value,
+                incidentDate: document.getElementById('incidentDate').value,
+                progress: 10
+            };
+            
+            claimData.fraudScore = calculateFraudScore(claimData);
+            
+            // Show loading
+            document.getElementById('processingLoader').style.display = 'block';
+            document.getElementById('claimForm').style.display = 'none';
+            
+            // Simulate AI processing
+            simulateAIProcessing();
+            
+            setTimeout(() => {
+                // Auto-approve or flag based on fraud score
+                if (claimData.fraudScore > 0.7) {
+                    claimData.status = 'flagged';
+                    showNotification('⚠️ Claim flagged for manual review due to high fraud risk', 'warning');
+                } else {
+                    claimData.status = 'approved';
+                    claimData.progress = 100;
+                    showNotification('✅ Claim approved automatically!');
+                }
+                
+                claims.unshift(claimData);
+                renderClaims();
+                renderCustomerClaims();
+                updateMetrics();
+                
+                // Reset form
+                document.getElementById('processingLoader').style.display = 'none';
+                document.getElementById('claimForm').style.display = 'block';
+                document.getElementById('claimForm').reset();
+                
+                // Reset agent status
+                setTimeout(() => {
+                    ['ocrAgent', 'nlpAgent', 'fraudAgent', 'customerAgent'].forEach(agentId => {
+                        const agent = document.getElementById(agentId);
+                        agent.classList.remove('active');
+                        const tasks = {
+                            ocrAgent: 'Ready for document extraction',
+                            nlpAgent: 'Standby for text analysis',
+                            fraudAgent: 'Monitoring for anomalies',
+                            customerAgent: 'Ready for customer queries'
+                        };
+                        agent.querySelector('.agent-task').textContent = tasks[agentId];
+                    });
+                }, 1000);
+                
+            }, 6000);
+        });
+
+        // AI Response templates
+        const aiResponses = {
+            status: [
+                "Your claim is currently being processed by our AI agents. Expected completion time is 2-4 hours.",
+                "I can see your claim is in the final verification stage. Our fraud detection agent has given it a low-risk score.",
+                "Your claim has been fast-tracked due to its straightforward nature. Approval is expected shortly."
+            ],
+            documents: [
+                "I've analyzed your submitted documents. All required documentation is present and validated.",
+                "Our OCR agent has successfully extracted all necessary information from your documents.",
+                "Your documents meet all policy requirements. No additional documentation needed."
+            ],
+            policy: [
+                "Based on your policy terms, this incident is covered under your current plan.",
+                "I've verified your policy coverage - you're eligible for the full claim amount.",
+                "Your policy includes comprehensive coverage for this type of incident."
+            ],
+            general: [
+                "I'm here to help with any questions about your claim. How can I assist you today?",
+                "Our AI system has processed thousands of similar claims. Your case follows standard procedures.",
+                "I can provide real-time updates on your claim status and answer any policy questions."
+            ]
+        };
+
+        function getAIResponse(query) {
+            const lowerQuery = query.toLowerCase();
+            
+            if (lowerQuery.includes('status') || lowerQuery.includes('when') || lowerQuery.includes('time')) {
+                return aiResponses.status[Math.floor(Math.random() * aiResponses.status.length)];
+            } else if (lowerQuery.includes('document') || lowerQuery.includes('paper') || lowerQuery.includes('file')) {
+                return aiResponses.documents[Math.floor(Math.random() * aiResponses.documents.length)];
+            } else if (lowerQuery.includes('policy') || lowerQuery.includes('coverage') || lowerQuery.includes('covered')) {
+                return aiResponses.policy[Math.floor(Math.random() * aiResponses.policy.length)];
+            } else {
+                return aiResponses.general[Math.floor(Math.random() * aiResponses.general.length)];
+            }
+        }
+
+        // Enhanced askAICA function
+        function askAICA() {
+            const query = document.getElementById('customerQuery').value;
+            const responseDiv = document.getElementById('aiResponse');
+            
+            if (!query.trim()) {
+                showNotification('Please enter a question', 'warning');
+                return;
+            }
+            
+            responseDiv.style.display = 'block';
+            responseDiv.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0 auto 10px;"></div><p style="text-align: center;">🤖 AICA is analyzing your query...</p>';
+            
+            // Activate customer agent
+            document.getElementById('customerAgent').classList.add('active');
+            document.getElementById('customerAgent').querySelector('.agent-task').textContent = 'Processing customer query...';
+            
+            setTimeout(() => {
+                const response = getAIResponse(query);
+                responseDiv.innerHTML = `
+                    <div style="border-left: 4px solid #3498db; padding-left: 15px;">
+                        <strong>🤖 AICA Response:</strong><br>
+                        ${response}
+                        <br><br>
+                        <small style="color: #666;">Query processed in 1.2 seconds | Confidence: ${(85 + Math.random() * 10).toFixed(1)}%</small>
+                    </div>
+                `;
+                document.getElementById('customerQuery').value = '';
+                
+                // Reset customer agent
+                setTimeout(() => {
+                    document.getElementById('customerAgent').classList.remove('active');
+                    document.getElementById('customerAgent').querySelector('.agent-task').textContent = 'Ready for customer queries';
+                }, 2000);
+                
+            }, 2000);
+        }
+
+        // Allow Enter key for AI queries
+        document.getElementById('customerQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                askAICA();
+            }
+        });
+
+        // Simulate real-time updates
+        function simulateRealTimeUpdates() {
+            setInterval(() => {
+                // Randomly update a processing claim
+                const processingClaims = claims.filter(c => c.status === 'processing');
+                if (processingClaims.length > 0) {
+                    const randomClaim = processingClaims[Math.floor(Math.random() * processingClaims.length)];
+                    if (Math.random() > 0.7) { // 30% chance of status change
+                        randomClaim.status = randomClaim.fraudScore > 0.6 ? 'flagged' : 'approved';
+                        randomClaim.progress = 100;
+                        renderClaims();
+                        renderCustomerClaims();
+                        updateMetrics();
+                        
+                        const statusText = randomClaim.status === 'approved' ? 'approved' : 'flagged for review';
+                        showNotification(`Claim ${randomClaim.id} has been ${statusText}`);
+                    } else {
+                        // Increase progress
+                        randomClaim.progress = Math.min(randomClaim.progress + 10, 90);
+                        renderCustomerClaims();
+                    }
+                }
+                
+                // Update performance metrics slightly
+                const totalClaimsEl = document.getElementById('totalClaims');
+                if (Math.random() > 0.9) { // 10% chance
+                    totalClaimsEl.textContent = parseInt(totalClaimsEl.textContent) + 1;
+                }
+                
+            }, 10000); // Every 10 seconds
+        }
+
+        // Advanced fraud detection simulation
+        function runAdvancedFraudAnalysis(claimId) {
+            const claim = claims.find(c => c.id === claimId);
+            if (!claim) return;
+            
+            // Simulate advanced ML analysis
+            const analysisFactors = {
+                'Pattern Analysis': Math.random() > 0.8 ? 'Suspicious' : 'Normal',
+                'Historical Comparison': Math.random() > 0.7 ? 'Anomaly Detected' : 'Within Range',
+                'Network Analysis': Math.random() > 0.9 ? 'Connected Claims Found' : 'Isolated Case',
+                'Behavioral Scoring': Math.random() > 0.6 ? 'Low Risk' : 'Medium Risk'
+            };
+            
+            console.log(`Advanced Analysis for ${claimId}:`, analysisFactors);
+            return analysisFactors;
+        }
+
+        // Batch processing simulation
+        function processBatchClaims() {
+            const processingClaims = claims.filter(c => c.status === 'processing');
+            
+            processingClaims.forEach((claim, index) => {
+                setTimeout(() => {
+                    const analysis = runAdvancedFraudAnalysis(claim.id);
+                    
+                    // Auto-decision based on analysis
+                    const suspiciousFactors = Object.values(analysis).filter(v => 
+                        v.includes('Suspicious') || v.includes('Anomaly') || v.includes('Connected')
+                    ).length;
+                    
+                    if (suspiciousFactors > 1 || claim.fraudScore > 0.7) {
+                        claim.status = 'flagged';
+                    } else {
+                        claim.status = 'approved';
+                    }
+                    claim.progress = 100;
+                    
+                    renderClaims();
+                    renderCustomerClaims();
+                    updateMetrics();
+                }, index * 1000);
+            });
+            
+            if (processingClaims.length > 0) {
+                showNotification(`Batch processing ${processingClaims.length} claims...`);
+            }
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'a':
+                        e.preventDefault();
+                        approveSelected();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        flagSelected();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        processBatchClaims();
+                        break;
+                }
+            }
+        });
+
+        // Export functionality for enterprise integration
+        function exportClaimsData() {
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "ID,Type,Customer,Amount,Date,Status,FraudScore,Description\n"
+                + claims.map(c => 
+                    `${c.id},${c.type},${c.customer},${c.amount},${c.date},${c.status},${c.fraudScore.toFixed(3)},"${c.description}"`
+                ).join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "aica_claims_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Claims data exported successfully!');
+        }
+
+        // API simulation for enterprise integration
+        const AICA_API = {
+            async processClaim(claimData) {
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const fraudScore = calculateFraudScore(claimData);
+                const result = {
+                    claimId: claimData.id,
+                    fraudScore: fraudScore,
+                    recommendation: fraudScore > 0.7 ? 'REJECT' : fraudScore > 0.3 ? 'REVIEW' : 'APPROVE',
+                    confidence: (85 + Math.random() * 10).toFixed(1),
+                    processingTime: (Math.random() * 3 + 1).toFixed(1) + ' seconds',
+                    extractedEntities: {
+                        amount: claimData.amount,
+                        date: claimData.incidentDate,
+                        type: claimData.type,
+                        sentiment: Math.random() > 0.5 ? 'neutral' : 'positive'
+                    }
+                };
+                
+                return result;
+            },
+            
+            async getFraudInsights(claimId) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                return {
+                    riskFactors: [
+                        'High claim amount relative to policy',
+                        'Recent policy activation',
+                        'Multiple claims in short timeframe'
+                    ].slice(0, Math.floor(Math.random() * 3) + 1),
+                    similarCases: Math.floor(Math.random() * 50) + 1,
+                    recommendation: 'Proceed with enhanced verification'
+                };
+            }
+        };
+
+        // Tab switching functionality
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+        }
+
+        // Login functionality
+        function setupLogin() {
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const role = document.getElementById('role').value;
+                
+                // Simple validation
+                if (!email || !password) {
+                    showNotification('Please enter both email and password', 'warning');
+                    return;
+                }
+                
+                // Simulate login process
+                currentUser = {
+                    email: email,
+                    role: role,
+                    name: email.split('@')[0]
+                };
+                
+                // Show main content, hide login
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('main-container').style.display = 'block';
+                document.getElementById('username').textContent = currentUser.name;
+                
+                // Initialize the app
+                initializeApp();
+                
+                showNotification(`Welcome back, ${currentUser.name}!`);
+            });
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('main-container').style.display = 'none';
+            document.getElementById('loginForm').reset();
+        }
+
+        function saveSettings() {
+            const sensitivity = document.getElementById('aiSensitivity').value;
+            const autoApprove = document.getElementById('autoApprove').checked;
+            const notifications = document.getElementById('notifications').checked;
+            
+            showNotification('Settings saved successfully!');
+        }
+
+        function initializeApp() {
+            initializeCharts();
+            renderClaims();
+            renderCustomerClaims();
+            updateMetrics();
+            setupTabs();
+            simulateRealTimeUpdates();
+            
+            // Initialize sensitivity slider
+            const sensitivitySlider = document.getElementById('aiSensitivity');
+            const sensitivityValue = document.getElementById('sensitivityValue');
+            
+            sensitivitySlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                let text = '';
+                
+                if (value <= 3) text = 'Low';
+                else if (value <= 6) text = 'Medium';
+                else if (value <= 8) text = 'Medium-High';
+                else text = 'High';
+                
+                sensitivityValue.textContent = text;
+            });
+            
+            // Add some demo processing claims
+            setTimeout(() => {
+                processBatchClaims();
+            }, 5000);
+            
+            console.log('🚀 AICA Platform Initialized');
+            console.log('💡 Keyboard shortcuts: Ctrl+A (Approve), Ctrl+F (Flag), Ctrl+P (Process Batch)');
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLogin();
+        });
+
+    </script>
+</body>
+</html>
