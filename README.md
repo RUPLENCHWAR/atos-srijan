@@ -1,1 +1,1 @@
-# atos-srijan
+# AICA - AI Claims Assistant
